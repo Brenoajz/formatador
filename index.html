@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formatador de URLs</title>
+    <style>
+        /* Estilos omitidos por brevidade */
+    </style>
+</head>
+<body>
+    <h1>Formatador de URLs <a href="https://github.com/Brenoajz">by Breno Neves</a></h1>
+    <p>Insira as URLs separadas por espaço:</p>
+    <textarea id="urlInput" placeholder="Insira as URLs separadas por espaço"></textarea>
+    <button onclick="formatUrls('normal')">Formatar URLs</button>
+    <br><br>    
+    <button onclick="formatUrls('bet')">Formatar URLs com opção Bet</button>
+
+    <h2>URLs Formatadas</h2>
+    <textarea id="formattedOutput" readonly></textarea>
+
+    <h2>Log</h2>
+    <div id="logOutput"></div>
+    <button onclick="clearLog()">Limpar Log</button>
+
+    <script>
+        function formatUrls(type) {
+            var urlInput = document.getElementById('urlInput').value;
+            var urls = urlInput.split(' ');
+
+            var formattedUrls = [];
+            var uniqueUrls = new Set(); // Usando um conjunto para armazenar URLs únicas
+
+            for (var i = 0; i < urls.length; i++) {
+                var url = urls[i].trim(); // Remover espaços em branco extras
+
+                if (!uniqueUrls.has(url)) {
+                    uniqueUrls.add(url); // Adicionar a URL única ao conjunto
+
+                    if (type === 'normal') {
+                        formattedUrls.push('"' + url + '"' + ',');
+                    } else if (type === 'bet') {
+                        formattedUrls.push('"' + url + '/I43"' + ',');
+                    }
+                } else {
+                    // Exibir alerta se a URL já estiver presente
+                    alert("A URL '" + url + "' já foi inserida.");
+                }
+            }
+
+            document.getElementById('formattedOutput').value = formattedUrls.join('\n');
+
+            // Enviar dados para o servidor
+            sendToServer(formattedUrls);
+        }
+
+        function sendToServer(urls) {
+            fetch('/save_log', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ urls: urls }),
+            })
+            .then(response => response.json())
+            .then(() => {
+                updateLog();
+            })
+            .catch(error => console.error('Erro ao enviar dados para o servidor:', error));
+        }
+
+        function updateLog() {
+            fetch('/log')
+            .then(response => response.json())
+            .then(logData => {
+                // Converter a array em uma string formatada
+                var logContent = JSON.stringify(logData)
+                    .replace(/\\/g, '') // Remover barras invertidas
+                    .replace(/\["/g, '[') // Remover as aspas extras do início
+                    .replace(/"\]/g, ']') // Remover as aspas extras do final
+                    .replace(/","/g, '", "') // Adicionar espaço após cada vírgula
+                    .replace(/\],/g, ']<br>') // Adicionar quebra de linha após cada array
+                    .replace(/"\s+"/g, '"'); // Remover aspas em espaços
+
+                document.getElementById('logOutput').innerHTML = logContent;
+            })
+            .catch(error => console.error('Erro ao obter o log do servidor:', error));
+        }
+
+        function clearLog() {
+            fetch('/clear_log', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(() => {
+                updateLog();
+            })
+            .catch(error => console.error('Erro ao limpar o log:', error));
+        }
+
+        // Atualizar o log ao carregar a página
+        updateLog();
+    </script>
+</body>
+</html>
